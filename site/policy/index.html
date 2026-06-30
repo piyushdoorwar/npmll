@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="npm LL privacy policy. npm LL has no backend, runs the npm CLI locally, and only contacts the npm registries you configure."
+    />
+    <title>npm LL Privacy Policy</title>
+    <link rel="icon" href="../assets/icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      // Enable motion before first paint so entrance states don't flash.
+      try {
+        if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          document.documentElement.classList.add("motion-enabled");
+        }
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="../" aria-label="npm LL home">
+        <img src="../assets/icons/icon.svg" alt="" />
+        <span>npm LL</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="../#features">Features</a>
+        <a href="../#workflow">Workflow</a>
+        <a href="../#privacy">Privacy</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="policy-page">
+        <div class="policy-hero" data-reveal>
+          <p class="eyebrow">Privacy policy</p>
+          <h1>npm LL Privacy Policy</h1>
+          <p class="lede">npm LL is a local-first VS Code extension for managing npm packages across your Node.js workspace.</p>
+        </div>
+
+        <div class="policy-content" data-reveal>
+          <article>
+            <h2>Data npm LL reads</h2>
+            <p>npm LL reads package and configuration files in your workspace — such as <code>package.json</code> and <code>.npmrc</code> — and resolved versions from <code>node_modules</code>, so it can show your workspace packages, dependencies, and registries.</p>
+          </article>
+
+          <article>
+            <h2>Registry requests</h2>
+            <p>When you search or view package details, npm LL sends queries directly from VS Code to the npm registry (registry.npmjs.org) or the registries you have configured. It uses the public npm registry HTTP API and your existing registry settings.</p>
+          </article>
+
+          <article>
+            <h2>Local npm CLI</h2>
+            <p>Installing, updating, removing, running <code>npm install</code>, and running outdated, vulnerable, and deprecated checks invoke the <code>npm</code> CLI on your machine against your own packages, via <code>spawn</code> with argument arrays — never through a shell. Nothing is sent to a server owned by this extension.</p>
+          </article>
+
+          <article>
+            <h2>No backend and no telemetry</h2>
+            <p>npm LL does not operate a backend service for extension data. It does not collect analytics, crash reports, package contents, package names, or usage history.</p>
+          </article>
+
+          <article>
+            <h2>Edits to your files</h2>
+            <p>npm LL only modifies package and configuration files in response to actions you take, and always asks before touching shared files such as the workspaces-root <code>package.json</code>. File writes stay inside your workspace.</p>
+          </article>
+
+          <article>
+            <h2>Credentials</h2>
+            <p>npm LL reads <code>.npmrc</code> registries read-only to learn which registries exist and whether auth is configured; it never stores tokens. Passwords, tokens, API keys, and URL-embedded credentials are masked in the output channel and the UI.</p>
+          </article>
+
+          <article>
+            <h2>Third-party registries</h2>
+            <p>npm registries (registry.npmjs.org and any private registries you configure) operate under their own privacy policies and terms. The developer is not responsible for how those registries handle requests sent to them.</p>
+          </article>
+
+          <article>
+            <h2>No warranty</h2>
+            <p>npm LL is provided on an "as is" and "as available" basis, without warranties of any kind, express or implied. Use of the extension is at your own risk.</p>
+          </article>
+
+          <article>
+            <h2>Limitation of liability</h2>
+            <p>To the maximum extent permitted by law, the developer is not liable for any damages arising from use of npm LL, including but not limited to data loss, build breakage, loss of profits, or business interruption.</p>
+          </article>
+
+          <article>
+            <h2>User responsibility</h2>
+            <p>You are solely responsible for the packages you install, the registries you trust, and any changes made to your packages through npm LL. Review dependency and version changes before committing them.</p>
+          </article>
+
+          <article>
+            <h2>Contact</h2>
+            <p>For privacy questions, email <a href="mailto:piyushdoorwar+npmll@gmail.com">piyushdoorwar+npmll@gmail.com</a>.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>npm LL</span>
+      <div class="footer-links">
+        <a href="../">Home</a>
+        <a href="https://github.com/piyushdoorwar/npmll" rel="noreferrer">GitHub</a>
+      </div>
+    </footer>
+
+    <script src="../app.js"></script>
+  </body>
+</html>

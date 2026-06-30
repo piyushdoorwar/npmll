@@ -1,0 +1,257 @@
+{
+  "name": "npmll",
+  "displayName": "npm LL: Package Manager & Library Lens",
+  "description": "npm package management and Library Lens for Node.js workspaces.",
+  "version": "0.1.0",
+  "publisher": "piyushdoorwar",
+  "license": "MIT",
+  "icon": "media/npmll.png",
+  "author": {
+    "name": "Piyush Doorwar"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/piyushdoorwar/npmll.git"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "keywords": [
+    "npm",
+    "node",
+    "javascript",
+    "typescript",
+    "packages",
+    "package manager"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:**/package.json"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "npmll",
+          "title": "npm LL",
+          "icon": "media/npmll.svg"
+        }
+      ]
+    },
+    "views": {
+      "npmll": [
+        {
+          "id": "npmll.home",
+          "name": "npm LL",
+          "type": "webview",
+          "icon": "media/npmll.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "npmll.openDashboard",
+        "title": "Open Dashboard",
+        "category": "npm LL",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "npmll.refreshWorkspace",
+        "title": "Refresh Workspace",
+        "category": "npm LL",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "npmll.searchPackages",
+        "title": "Search Packages",
+        "category": "npm LL",
+        "icon": "$(search)"
+      },
+      {
+        "command": "npmll.addPackage",
+        "title": "Add Package",
+        "category": "npm LL",
+        "icon": "$(add)"
+      },
+      {
+        "command": "npmll.removePackage",
+        "title": "Remove Package",
+        "category": "npm LL",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "npmll.updatePackage",
+        "title": "Update Package",
+        "category": "npm LL",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "npmll.updateAllPackages",
+        "title": "Update All Packages",
+        "category": "npm LL"
+      },
+      {
+        "command": "npmll.showPackageDetails",
+        "title": "View Package Details",
+        "category": "npm LL",
+        "icon": "$(info)"
+      },
+      {
+        "command": "npmll.installDependencies",
+        "title": "Install Dependencies",
+        "category": "npm LL"
+      },
+      {
+        "command": "npmll.installProject",
+        "title": "Install Dependencies (Package)",
+        "category": "npm LL",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "npmll.manageSources",
+        "title": "Manage Registries",
+        "category": "npm LL"
+      },
+      {
+        "command": "npmll.openNpmrc",
+        "title": "Open .npmrc",
+        "category": "npm LL"
+      },
+      {
+        "command": "npmll.checkOutdated",
+        "title": "Check Outdated Packages",
+        "category": "npm LL",
+        "icon": "$(versions)"
+      },
+      {
+        "command": "npmll.checkVulnerable",
+        "title": "Check Vulnerable Packages",
+        "category": "npm LL",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "npmll.checkDeprecated",
+        "title": "Check Deprecated Packages",
+        "category": "npm LL"
+      },
+      {
+        "command": "npmll.openOutputChannel",
+        "title": "Open Output Channel",
+        "category": "npm LL"
+      },
+      {
+        "command": "npmll.openSettings",
+        "title": "Open Settings",
+        "category": "npm LL",
+        "icon": "$(gear)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "npmll.openDashboard",
+          "when": "view == npmll.home",
+          "group": "navigation@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "npm LL",
+      "properties": {
+        "npmll.defaultRegistry": {
+          "type": "string",
+          "default": "",
+          "description": "Name or URL of the registry used by default for search. Empty uses the public npm registry."
+        },
+        "npmll.includePrerelease": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include prerelease versions in search results and version pickers by default."
+        },
+        "npmll.autoRefreshOnManifestChange": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh the package model when package.json or .npmrc files change."
+        },
+        "npmll.scanOnStartup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scan the workspace for Node.js packages when the extension activates."
+        },
+        "npmll.showTransitivePackages": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include transitive (non-declared) dependencies in outdated/vulnerability checks when available."
+        },
+        "npmll.confirmBeforeMultiProjectChanges": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a confirmation summary before applying changes to multiple workspace packages."
+        },
+        "npmll.saveExact": {
+          "type": "boolean",
+          "default": false,
+          "description": "Pin installed versions exactly (npm install --save-exact) instead of using a caret range."
+        },
+        "npmll.preferNpmCli": {
+          "type": "boolean",
+          "default": false,
+          "description": "Prefer the npm CLI for package search instead of the npm registry HTTP API."
+        },
+        "npmll.registryApiUrl": {
+          "type": "string",
+          "default": "https://registry.npmjs.org",
+          "description": "npm registry base URL used for search and metadata."
+        },
+        "npmll.maxSearchResults": {
+          "type": "number",
+          "default": 25,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of search results to fetch."
+        },
+        "npmll.excludedFolders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "node_modules",
+            ".git",
+            "dist",
+            "out",
+            "build",
+            ".next",
+            ".cache",
+            ".vscode-test"
+          ],
+          "description": "Folder names excluded from workspace scanning (node_modules is always excluded)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "node esbuild.js && npm run webview:build",
+    "watch": "node esbuild.js --watch",
+    "package": "node esbuild.js --production && npm run webview:build",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "webview:dev": "npm --prefix webview-ui run dev",
+    "webview:build": "npm --prefix webview-ui run build",
+    "postinstall": "npm --prefix webview-ui install"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.96.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.8"
+  }
+}
