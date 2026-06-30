@@ -244,10 +244,10 @@
           if (val) {
             val.textContent =
               checked.length === 0
-                ? "Select projects"
+                ? "Select packages"
                 : checked.length <= 2
                 ? checked.join(", ")
-                : checked.length + " projects";
+                : checked.length + " packages";
           }
           updateInstallLabel(checked.length);
         });
@@ -267,8 +267,8 @@
       if (!installBtn || installBtn.classList.contains("busy")) return;
       installBtn.textContent =
         count === 0
-          ? "Select a project"
-          : "Install into " + count + (count === 1 ? " project" : " projects");
+          ? "Select a package"
+          : "Install into " + count + (count === 1 ? " package" : " packages");
       installBtn.disabled = count === 0;
     }
 
