@@ -1116,6 +1116,39 @@ main {
   color: var(--accent-bright);
 }
 
+.notfound {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 136px);
+  padding: clamp(44px, 7vw, 76px) clamp(18px, 5vw, 64px);
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 30%, var(--accent-glow), transparent 26rem),
+    linear-gradient(180deg, #111820 0%, var(--bg) 100%);
+}
+
+.notfound .code404 {
+  color: var(--accent);
+  font: 800 clamp(72px, 14vw, 128px) / 1 "SF Mono", "Cascadia Code", Consolas, monospace;
+  letter-spacing: -0.04em;
+}
+
+.notfound h1 {
+  margin-top: 14px;
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.15;
+}
+
+.notfound p {
+  max-width: 520px;
+  margin: 0 auto;
+  color: var(--muted);
+}
+
+.notfound .actions {
+  justify-content: center;
+}
+
 footer {
   display: flex;
   align-items: center;
