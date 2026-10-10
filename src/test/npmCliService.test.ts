@@ -5,13 +5,15 @@ import {
   buildSearchArgs,
   buildUninstallArgs,
   buildViewArgs,
-  isTransitiveLocation,
+  isTransitiveOutdated,
   parseAuditJson,
   parseCliVersion,
   parseOutdatedJson,
   parseSearchJson,
-  parseViewVersionsJson
+  parseViewVersionsJson,
+  resolveNpmLauncher
 } from "../services/npmCliService";
+import { compareVersions } from "../services/npmApiService";
 
 describe("buildInstallArgs", () => {
   it("pins the version and selects the save flag by dependency type", () => {
@@ -79,11 +81,50 @@ describe("parseOutdatedJson", () => {
   });
 });
 
-describe("isTransitiveLocation", () => {
-  it("detects nested install locations", () => {
-    expect(isTransitiveLocation("node_modules/lodash")).toBe(false);
-    expect(isTransitiveLocation("node_modules/a/node_modules/b")).toBe(true);
-    expect(isTransitiveLocation(undefined)).toBe(false);
+describe("isTransitiveOutdated", () => {
+  it("treats the project's own declared dependencies as direct", () => {
+    expect(isTransitiveOutdated({ dependent: "api" }, true, ["api", "api-dir"])).toBe(false);
+    expect(isTransitiveOutdated({}, true, ["api"])).toBe(false);
+  });
+
+  it("treats undeclared or other packages' dependencies as transitive, even when hoisted", () => {
+    expect(isTransitiveOutdated({ dependent: "api" }, false, ["api"])).toBe(true);
+    expect(isTransitiveOutdated({ dependent: "body-parser" }, true, ["api"])).toBe(true);
+  });
+});
+
+describe("npm error output", () => {
+  const error = JSON.stringify({ error: { code: "ENOLOCK", summary: "This command requires an existing lockfile." } });
+
+  it("reports a failed audit instead of no vulnerabilities", () => {
+    expect(parseAuditJson(error)).toBeNull();
+  });
+
+  it("reports a failed outdated check instead of everything up to date", () => {
+    expect(parseOutdatedJson(error)).toBeNull();
+  });
+
+  it("still parses an outdated package that is literally named error", () => {
+    const doc = JSON.stringify({ error: { current: "1.0.0", wanted: "1.0.1", latest: "2.0.0" } });
+    expect(parseOutdatedJson(doc)).toHaveLength(1);
+  });
+});
+
+describe("resolveNpmLauncher", () => {
+  it("uses npm directly off Windows", () => {
+    expect(resolveNpmLauncher("linux", "/usr/bin", () => true)).toEqual({ command: "npm", prefixArgs: [] });
+  });
+
+  it("runs npm-cli.js with the bundled node on Windows", () => {
+    const files = new Set([
+      "C:\\Program Files\\nodejs\\npm.cmd",
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js"
+    ]);
+    expect(resolveNpmLauncher("win32", "C:\\Windows;C:\\Program Files\\nodejs", (f) => files.has(f))).toEqual({
+      command: "C:\\Program Files\\nodejs\\node.exe",
+      prefixArgs: ["C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js"]
+    });
   });
 });
 
@@ -171,5 +212,12 @@ describe("parseCliVersion", () => {
     expect(parseCliVersion("10.2.4\n")).toBe("10.2.4");
     expect(parseCliVersion("v20.11.0")).toBe("20.11.0");
     expect(parseCliVersion("garbage")).toBeUndefined();
+  });
+});
+
+describe("compareVersions", () => {
+  it("orders by semver rather than publish order", () => {
+    const sorted = ["3.0.0", "2.7.0", "3.0.0-beta.2", "3.0.0-beta.10", "10.0.0", "2.6.13"].sort(compareVersions);
+    expect(sorted).toEqual(["2.6.13", "2.7.0", "3.0.0-beta.2", "3.0.0-beta.10", "3.0.0", "10.0.0"]);
   });
 });

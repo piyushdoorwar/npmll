@@ -51,6 +51,49 @@ interface SearchResponse {
   }[];
 }
 
+/**
+ * Orders two semver versions (ascending). The registry lists versions in
+ * publish order, which puts backports (e.g. a 2.x patch released after 3.0)
+ * last, so anything that means "newest" has to sort first.
+ */
+export function compareVersions(a: string, b: string): number {
+  const parse = (v: string) => {
+    const [core, pre] = v.replace(/\+.*$/, "").split(/-(.*)/s);
+    return { nums: core.split(".").map((n) => Number(n) || 0), pre: pre ? pre.split(".") : [] };
+  };
+  const x = parse(a);
+  const y = parse(b);
+  for (let i = 0; i < 3; i++) {
+    const diff = (x.nums[i] ?? 0) - (y.nums[i] ?? 0);
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+  // A release outranks any of its prereleases.
+  if (x.pre.length === 0 || y.pre.length === 0) {
+    return y.pre.length - x.pre.length;
+  }
+  for (let i = 0; i < Math.max(x.pre.length, y.pre.length); i++) {
+    const p = x.pre[i];
+    const q = y.pre[i];
+    if (p === undefined || q === undefined) {
+      return p === undefined ? -1 : 1;
+    }
+    const pn = /^\d+$/.test(p);
+    const qn = /^\d+$/.test(q);
+    if (pn && qn && Number(p) !== Number(q)) {
+      return Number(p) - Number(q);
+    }
+    if (pn !== qn) {
+      return pn ? -1 : 1;
+    }
+    if (p !== q) {
+      return p < q ? -1 : 1;
+    }
+  }
+  return 0;
+}
+
 function isPrerelease(version: string): boolean {
   return version.includes("-");
 }
@@ -145,10 +188,16 @@ export class NpmApiService {
       }));
   }
 
-  /** Lists all published versions (oldest first). */
+  /** Lists all published versions, lowest to highest by semver. */
   async getVersions(packageId: string, registryUrl?: string): Promise<string[]> {
     const packument = await this.getPackument(packageId, registryUrl);
-    return Object.keys(packument.versions ?? {});
+    return Object.keys(packument.versions ?? {}).sort(compareVersions);
+  }
+
+  /** The version the registry's `latest` dist-tag points at (what `npm install pkg` picks). */
+  async getLatestVersion(packageId: string, registryUrl?: string): Promise<string | undefined> {
+    const packument = await this.getPackument(packageId, registryUrl);
+    return packument["dist-tags"]?.latest;
   }
 
   /** Maps version -> deprecation message for every deprecated version (batch, one request). */
@@ -178,9 +227,10 @@ export class NpmApiService {
     const latestTag = distTags.latest ?? versionKeys[versionKeys.length - 1];
     const latest = versionMap[latestTag] ?? versionMap[versionKeys[versionKeys.length - 1]];
 
-    const versions: PackageVersionInfo[] = versionKeys
-      .map((v) => ({ version: v, isPrerelease: isPrerelease(v) }))
-      .reverse();
+    const versions: PackageVersionInfo[] = [...versionKeys]
+      .sort(compareVersions)
+      .reverse()
+      .map((v) => ({ version: v, isPrerelease: isPrerelease(v) }));
     const latestStableVersion = !isPrerelease(latestTag) ? latestTag : versions.find((v) => !v.isPrerelease)?.version;
     const latestPrereleaseVersion = versions.find((v) => v.isPrerelease)?.version;
 

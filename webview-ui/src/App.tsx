@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onMessage, post } from "./api/vscodeApi";
-import { Header } from "./components/Header";
 import { IconCheck, IconClose } from "./components/Icons";
 import { InstalledPackages } from "./components/InstalledPackages";
 import { OverviewView } from "./components/OverviewView";
 import { PackageDetails } from "./components/PackageDetails";
 import { SearchPackages } from "./components/SearchPackages";
 import { SettingsView } from "./components/SettingsView";
-import { Sidebar } from "./components/Sidebar";
 import { SourcesView } from "./components/SourcesView";
+import { TopBar } from "./components/TopBar";
 import { UpdatesView } from "./components/UpdatesView";
 import { VulnerabilitiesView } from "./components/VulnerabilitiesView";
 import { outdatedKey } from "./keys";
@@ -22,7 +21,7 @@ import {
   PackageSource,
   TabId,
   VulnerablePackage,
-  WorkspaceModel
+  WorkspaceModel,
 } from "./types";
 
 export interface OperationState {
@@ -42,11 +41,15 @@ export function App() {
   const [vulnerable, setVulnerable] = useState<VulnerablePackage[]>();
   const [deprecated, setDeprecated] = useState<DeprecatedPackage[]>();
   const [sources, setSources] = useState<PackageSource[]>();
-  const [operations, setOperations] = useState<Record<string, OperationState>>({});
+  const [operations, setOperations] = useState<Record<string, OperationState>>(
+    {},
+  );
   // Live progress for the streaming checks, cleared once each check is done.
   const [outdatedProgress, setOutdatedProgress] = useState<CheckProgressInfo>();
-  const [vulnerableProgress, setVulnerableProgress] = useState<CheckProgressInfo>();
-  const [deprecatedProgress, setDeprecatedProgress] = useState<CheckProgressInfo>();
+  const [vulnerableProgress, setVulnerableProgress] =
+    useState<CheckProgressInfo>();
+  const [deprecatedProgress, setDeprecatedProgress] =
+    useState<CheckProgressInfo>();
   // Outdated rows with an update in flight (keyed by outdatedKey), so the UI can
   // show per-row progress and drop rows the moment their update succeeds.
   const [updatingKeys, setUpdatingKeys] = useState<Set<string>>(new Set());
@@ -77,7 +80,12 @@ export function App() {
         case "outdatedResults":
           // Drop rows the user already updated this session so a later (or final)
           // streaming snapshot built from pre-update data can't resurrect them.
-          setOutdated(message.results.filter((e) => !resolvedKeysRef.current.has(outdatedKey(e.id, e.projectPath))));
+          setOutdated(
+            message.results.filter(
+              (e) =>
+                !resolvedKeysRef.current.has(outdatedKey(e.id, e.projectPath)),
+            ),
+          );
           setOutdatedProgress(message.done ? undefined : message.progress);
           break;
         case "vulnerableResults":
@@ -89,7 +97,9 @@ export function App() {
           setDeprecatedProgress(message.done ? undefined : message.progress);
           break;
         case "packageUpdated": {
-          const keys = new Set(message.projectPaths.map((p) => outdatedKey(message.packageId, p)));
+          const keys = new Set(
+            message.projectPaths.map((p) => outdatedKey(message.packageId, p)),
+          );
           setUpdatingKeys((prev) => {
             const next = new Set(prev);
             for (const k of keys) {
@@ -103,7 +113,9 @@ export function App() {
             for (const k of keys) {
               resolvedKeysRef.current.add(k);
             }
-            setOutdated((prev) => prev?.filter((e) => !keys.has(outdatedKey(e.id, e.projectPath))));
+            setOutdated((prev) =>
+              prev?.filter((e) => !keys.has(outdatedKey(e.id, e.projectPath))),
+            );
           }
           break;
         }
@@ -113,26 +125,41 @@ export function App() {
             setSearchQuery(message.query);
             setDetails(undefined);
             post({ type: "getPackageDetails", packageId: message.query });
-            post({ type: "searchPackages", query: message.query, includePrerelease: true, exactMatch: true });
+            post({
+              type: "searchPackages",
+              query: message.query,
+              includePrerelease: true,
+              exactMatch: true,
+            });
           } else {
             setTab(message.tab as TabId);
             if (message.tab === "browse" && message.query) {
               setSearchQuery(message.query);
-              post({ type: "searchPackages", query: message.query, includePrerelease: false });
+              post({
+                type: "searchPackages",
+                query: message.query,
+                includePrerelease: false,
+              });
             }
           }
           break;
         case "operationStarted":
           setOperations((prev) => ({
             ...prev,
-            [message.operationId]: { label: message.label, status: "running" }
+            [message.operationId]: { label: message.label, status: "running" },
           }));
           break;
         case "operationProgress":
           setOperations((prev) => {
             const current = prev[message.operationId];
             return current
-              ? { ...prev, [message.operationId]: { ...current, message: message.message } }
+              ? {
+                  ...prev,
+                  [message.operationId]: {
+                    ...current,
+                    message: message.message,
+                  },
+                }
               : prev;
           });
           break;
@@ -142,7 +169,14 @@ export function App() {
             if (!current) {
               return prev;
             }
-            const next = { ...prev, [message.operationId]: { ...current, status: "completed" as const, message: message.message } };
+            const next = {
+              ...prev,
+              [message.operationId]: {
+                ...current,
+                status: "completed" as const,
+                message: message.message,
+              },
+            };
             // Completed entries fade out shortly after.
             setTimeout(() => {
               setOperations((later) => {
@@ -162,8 +196,8 @@ export function App() {
               [message.operationId]: {
                 label: current?.label ?? "Operation",
                 status: "failed",
-                message: message.error
-              }
+                message: message.error,
+              },
             };
           });
           break;
@@ -176,8 +210,10 @@ export function App() {
 
   const isRunning = useCallback(
     (prefix: string) =>
-      Object.values(operations).some((op) => op.status === "running" && op.label.startsWith(prefix)),
-    [operations]
+      Object.values(operations).some(
+        (op) => op.status === "running" && op.label.startsWith(prefix),
+      ),
+    [operations],
   );
 
   const search = useCallback(
@@ -185,10 +221,15 @@ export function App() {
       setSearchQuery(query);
       if (query.trim().length > 0) {
         setSearchResults(undefined);
-        post({ type: "searchPackages", query: query.trim(), includePrerelease, exactMatch });
+        post({
+          type: "searchPackages",
+          query: query.trim(),
+          includePrerelease,
+          exactMatch,
+        });
       }
     },
-    []
+    [],
   );
 
   const showDetails = useCallback((packageId: string) => {
@@ -206,7 +247,12 @@ export function App() {
       return next;
     });
     for (const e of entries) {
-      post({ type: "updatePackage", packageId: e.id, version: e.latestVersion, projectPaths: [e.projectPath] });
+      post({
+        type: "updatePackage",
+        packageId: e.id,
+        version: e.latestVersion,
+        projectPaths: [e.projectPath],
+      });
     }
   }, []);
 
@@ -220,13 +266,15 @@ export function App() {
     () => ({
       projects: model?.projects.length ?? 0,
       installed: new Set(
-        (model?.projects ?? []).flatMap((p) => p.packages.filter((pkg) => !pkg.isTransitive).map((pkg) => pkg.id))
+        (model?.projects ?? []).flatMap((p) =>
+          p.packages.filter((pkg) => !pkg.isTransitive).map((pkg) => pkg.id),
+        ),
       ).size,
       outdated: outdated?.length,
       vulnerable: vulnerable?.length,
-      sources: sources?.length
+      sources: sources?.length,
     }),
-    [model, outdated, vulnerable, sources]
+    [model, outdated, vulnerable, sources],
   );
 
   const dismissOperation = (id: string) =>
@@ -244,6 +292,7 @@ export function App() {
           details={details}
           loading={!details && isRunning("Load details")}
           projects={model?.projects ?? []}
+          defaultPrerelease={settings?.includePrerelease}
           onClose={() => setDetails(undefined)}
         />
       </div>
@@ -251,74 +300,82 @@ export function App() {
 
   return (
     <div className="app">
-      <Header
+      <TopBar
+        tab={tab}
+        counts={counts}
         settings={settings}
-        projectCount={counts.projects}
+        onSelect={setTab}
         onRefresh={() => post({ type: "scanWorkspace" })}
       />
-      <div className="body">
-        <Sidebar tab={tab} counts={counts} onSelect={setTab} />
-        <main className="content">
-          {tab === "overview" && (
-            <OverviewView
-              model={model}
-              outdated={outdated}
-              vulnerable={vulnerable}
-              settings={settings}
-              onNavigate={setTab}
-            />
-          )}
-          {tab === "browse" && (
-            <div className="browse-layout split">
-              <div className="browse-results">
-                <SearchPackages
-                  query={searchQuery}
-                  results={searchResults}
-                  searching={isRunning("Search")}
-                  defaultPrerelease={settings?.includePrerelease ?? false}
-                  onSearch={search}
-                  onSelect={showDetails}
-                  selectedId={details?.id}
-                />
-              </div>
-              {detailsPanel}
+      <main className="content">
+        {tab === "overview" && (
+          <OverviewView
+            model={model}
+            outdated={outdated}
+            vulnerable={vulnerable}
+            settings={settings}
+            onNavigate={setTab}
+          />
+        )}
+        {tab === "browse" && (
+          <div className="browse-layout split">
+            <div className="browse-results">
+              <SearchPackages
+                query={searchQuery}
+                results={searchResults}
+                searching={isRunning("Search")}
+                defaultPrerelease={settings?.includePrerelease ?? false}
+                onSearch={search}
+                onSelect={showDetails}
+                selectedId={details?.id}
+              />
             </div>
-          )}
-          {tab === "installed" && (
-            <div className="browse-layout split">
-              <div className="browse-results">
-                <InstalledPackages model={model} onDetails={showDetails} selectedId={details?.id} />
-              </div>
-              {detailsPanel}
+            {detailsPanel}
+          </div>
+        )}
+        {tab === "installed" && (
+          <div className="browse-layout split">
+            <div className="browse-results">
+              <InstalledPackages
+                model={model}
+                onDetails={showDetails}
+                selectedId={details?.id}
+              />
             </div>
-          )}
-          {tab === "updates" && (
-            <UpdatesView
-              outdated={outdated}
-              checking={isRunning("Check outdated")}
-              progress={outdatedProgress}
-              updatingKeys={updatingKeys}
-              onUpdate={applyUpdates}
-              onCheck={checkOutdated}
-              onDetails={(id) => { setTab("browse"); showDetails(id); }}
-            />
-          )}
-          {tab === "vulnerabilities" && (
-            <VulnerabilitiesView
-              vulnerable={vulnerable}
-              deprecated={deprecated}
-              checkingVulnerable={isRunning("Check vulnerable")}
-              checkingDeprecated={isRunning("Check deprecated")}
-              vulnerableProgress={vulnerableProgress}
-              deprecatedProgress={deprecatedProgress}
-              onCheckVulnerable={() => post({ type: "checkVulnerable" })}
-              onCheckDeprecated={() => post({ type: "checkDeprecated" })}
-            />
-          )}
-          {tab === "sources" && <SourcesView sources={sources} />}
-          {tab === "settings" && <SettingsView settings={settings} />}
-        </main>
-      </div>
+            {detailsPanel}
+          </div>
+        )}
+        {tab === "updates" && (
+          <UpdatesView
+            outdated={outdated}
+            checking={isRunning("Check outdated")}
+            progress={outdatedProgress}
+            updatingKeys={updatingKeys}
+            onUpdate={applyUpdates}
+            onCheck={checkOutdated}
+            onDetails={(id) => {
+              setTab("browse");
+              showDetails(id);
+            }}
+          />
+        )}
+        {tab === "vulnerabilities" && (
+          <VulnerabilitiesView
+            vulnerable={vulnerable}
+            deprecated={deprecated}
+            checkingVulnerable={isRunning("Check vulnerable")}
+            checkingDeprecated={isRunning("Check deprecated")}
+            vulnerableProgress={vulnerableProgress}
+            deprecatedProgress={deprecatedProgress}
+            onCheckVulnerable={() => post({ type: "checkVulnerable" })}
+            onCheckDeprecated={() => post({ type: "checkDeprecated" })}
+          />
+        )}
+        {tab === "sources" && (
+          <SourcesView sources={sources} />
+        )}
+        {tab === "settings" && <SettingsView settings={settings} />}
+      </main>
       <div className="statusbar">
         {Object.entries(operations).map(([id, op]) => (
           <div key={id} className={`status-item ${op.status}`}>
@@ -334,7 +391,11 @@ export function App() {
               {op.message ? ` — ${op.message}` : ""}
             </span>
             {op.status !== "running" && (
-              <button className="dismiss" onClick={() => dismissOperation(id)} title="Dismiss">
+              <button
+                className="dismiss"
+                onClick={() => dismissOperation(id)}
+                title="Dismiss"
+              >
                 <IconClose size={12} />
               </button>
             )}

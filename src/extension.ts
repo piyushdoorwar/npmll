@@ -63,7 +63,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // so an install doesn't trigger a rescan storm.
   const refresh = debounce(() => {
     if (getConfig().autoRefreshOnManifestChange) {
-      scanner.scan().then(() => homeProvider.push()).catch((err) => logger.error("Workspace scan failed", err));
+      scanner.scan().catch((err) => logger.error("Workspace scan failed", err));
       DashboardPanel.pushSources(services);
     }
   }, 500);
@@ -82,6 +82,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders(() => refresh()),
     services.results.onDidChange(() => homeProvider.push()),
+    // Every scan (startup, file watcher, Refresh, dashboard) can change the
+    // packages and the .npmrc registries the sidebar counts.
+    { dispose: scanner.onDidChangeModel(() => homeProvider.push(true)) },
     { dispose: () => refresh.cancel() },
     { dispose: () => logger.dispose() }
   );
@@ -121,7 +124,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         for (const issue of result.issues) {
           logger.warn(`${issue.file}: ${issue.message}`);
         }
-        homeProvider.push();
       })
       .catch((err) => logger.error("Initial workspace scan failed", err));
   }

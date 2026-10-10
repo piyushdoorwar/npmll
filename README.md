@@ -6,7 +6,9 @@
 
 <p align="center">npm package management and Library Lens for Node.js workspaces.</p>
 
-npm LL brings a Visual Studio-style package experience to VS Code for npm projects: scan your workspace, browse and search packages, install into one or many workspace packages, keep dependencies updated, and stay on top of vulnerable or deprecated packages — all from a fast, dark, blue-accented dashboard and a dedicated sidebar.
+Website: <https://npmll.piyushdoorwar.com/>
+
+npm LL brings a Visual Studio-style package experience to VS Code for npm projects: scan your workspace, browse and search packages, install into one or many workspace packages, keep dependencies updated, and stay on top of vulnerable or deprecated packages — all from a fast dashboard that follows your VS Code theme and a dedicated sidebar.
 
 > **Screenshots coming soon.**
 

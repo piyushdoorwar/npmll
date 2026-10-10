@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as vscode from "vscode";
+import { getConfig } from "../config";
 import { NpmllServices } from "../services/container";
 import { installPackage } from "../services/packageOperations";
 import { logger } from "../utils/logger";
@@ -94,7 +95,8 @@ export function registerUpdatePackageCommands(services: NpmllServices): vscode.D
               {
                 version: entry.latestVersion,
                 dependencyType:
-                  project?.packages.find((p) => p.id === entry.id)?.dependencyType ?? entry.dependencyType
+                  project?.packages.find((p) => p.id === entry.id)?.dependencyType ?? entry.dependencyType,
+                saveExact: getConfig().saveExact
               },
               { signal: abort.signal }
             );

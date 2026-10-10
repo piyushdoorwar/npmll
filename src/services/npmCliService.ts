@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as path from "path";
 import { DependencyType, PackageSearchResult } from "../models/packageModel";
 import { CommandResult, runCommand, RunOptions } from "./commandRunner";
 
@@ -83,6 +85,21 @@ interface RawOutdated {
   dependent?: string;
 }
 
+/**
+ * npm reports failures (no lockfile, registry/auth errors) as `{"error": {...}}`
+ * on stdout. That parses fine, so it must be treated as a failure explicitly or
+ * the check would look like a clean result.
+ */
+function isNpmError(doc: unknown): boolean {
+  const error = (doc as { error?: unknown } | null)?.error;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    !("latest" in error) &&
+    ("code" in error || "summary" in error)
+  );
+}
+
 function tryParse<T>(stdout: string): T | null {
   const start = stdout.search(/[[{]/);
   if (start < 0) {
@@ -105,7 +122,7 @@ export function parseOutdatedJson(stdout: string): NpmOutdatedEntry[] | null {
     return [];
   }
   const doc = tryParse<Record<string, RawOutdated | RawOutdated[]>>(stdout);
-  if (!doc) {
+  if (!doc || isNpmError(doc)) {
     return null;
   }
   const result: NpmOutdatedEntry[] = [];
@@ -127,12 +144,21 @@ export function parseOutdatedJson(stdout: string): NpmOutdatedEntry[] | null {
   return result;
 }
 
-/** True when an npm install location is nested (a transitive dependency). */
-export function isTransitiveLocation(location?: string): boolean {
-  if (!location) {
-    return false;
+/**
+ * True when an `npm outdated` entry is not one of the project's own direct
+ * dependencies. npm's JSON `location` is an absolute path, so hoisted
+ * transitive packages can't be told apart by nesting; use the declaration and
+ * the depending package instead.
+ */
+export function isTransitiveOutdated(
+  entry: { dependent?: string },
+  isDeclared: boolean,
+  projectNames: string[]
+): boolean {
+  if (!isDeclared) {
+    return true;
   }
-  return (location.match(/node_modules/g) ?? []).length > 1;
+  return entry.dependent !== undefined && !projectNames.includes(entry.dependent);
 }
 
 export interface NpmAuditEntry {
@@ -178,7 +204,7 @@ interface RawAuditV6 {
 /** Parses `npm audit --json` (npm v7+ `vulnerabilities`, with a v6 `advisories` fallback). */
 export function parseAuditJson(stdout: string): NpmAuditEntry[] | null {
   const doc = tryParse<RawAuditV7 & RawAuditV6>(stdout);
-  if (!doc) {
+  if (!doc || isNpmError(doc)) {
     return null;
   }
   const result: NpmAuditEntry[] = [];
@@ -279,15 +305,56 @@ export interface CliLogSink {
   (line: string): void;
 }
 
+/**
+ * Works out how to start npm without a shell. On Windows `npm` is an `npm.cmd`
+ * shim, which `spawn` cannot run unless a shell is involved, so run the
+ * `npm-cli.js` that ships next to it with node instead.
+ */
+export function resolveNpmLauncher(
+  platform: NodeJS.Platform = process.platform,
+  pathEnv: string = process.env.PATH ?? "",
+  exists: (file: string) => boolean = fs.existsSync
+): { command: string; prefixArgs: string[] } {
+  if (platform !== "win32") {
+    return { command: "npm", prefixArgs: [] };
+  }
+  for (const dir of pathEnv.split(";").filter(Boolean)) {
+    if (!exists(path.win32.join(dir, "npm.cmd"))) {
+      continue;
+    }
+    const cli = path.win32.join(dir, "node_modules", "npm", "bin", "npm-cli.js");
+    if (!exists(cli)) {
+      continue;
+    }
+    const node = path.win32.join(dir, "node.exe");
+    return { command: exists(node) ? node : "node", prefixArgs: [cli] };
+  }
+  return { command: "npm", prefixArgs: [] };
+}
+
 export class NpmCliService {
-  constructor(private readonly log: CliLogSink, private readonly npmPath = "npm") {}
+  private readonly launcher: { command: string; prefixArgs: string[] };
+  // Commands that write package.json / package-lock.json run one at a time, so
+  // a batch of updates can't race each other on the same files.
+  private mutations: Promise<unknown> = Promise.resolve();
+
+  constructor(private readonly log: CliLogSink, launcher = resolveNpmLauncher()) {
+    this.launcher = launcher;
+  }
 
   run(args: string[], options: RunOptions = {}): Promise<CommandResult> {
-    return runCommand(this.npmPath, args, { ...options, onLog: this.log });
+    return runCommand(this.launcher.command, [...this.launcher.prefixArgs, ...args], { ...options, onLog: this.log });
+  }
+
+  private runExclusive(args: string[], options: RunOptions): Promise<CommandResult> {
+    const next = this.mutations.then(() => this.run(args, options));
+    this.mutations = next.catch(() => undefined);
+    return next;
   }
 
   async detectNpm(): Promise<{ available: boolean; version?: string }> {
-    const result = await runCommand(this.npmPath, ["--version"], { timeoutMs: 15000 });
+    const { command, prefixArgs } = this.launcher;
+    const result = await runCommand(command, [...prefixArgs, "--version"], { timeoutMs: 15000 });
     if (result.spawnError || result.code !== 0) {
       return { available: false };
     }
@@ -308,15 +375,15 @@ export class NpmCliService {
     options: { version?: string; dependencyType?: DependencyType; saveExact?: boolean } = {},
     runOptions: RunOptions = {}
   ): Promise<CommandResult> {
-    return this.run(buildInstallArgs(packageId, options), { ...runOptions, cwd });
+    return this.runExclusive(buildInstallArgs(packageId, options), { ...runOptions, cwd });
   }
 
   uninstall(cwd: string, packageId: string, runOptions: RunOptions = {}): Promise<CommandResult> {
-    return this.run(buildUninstallArgs(packageId), { ...runOptions, cwd });
+    return this.runExclusive(buildUninstallArgs(packageId), { ...runOptions, cwd });
   }
 
   installAll(cwd: string, runOptions: RunOptions = {}): Promise<CommandResult> {
-    return this.run(buildInstallAllArgs(), { ...runOptions, cwd });
+    return this.runExclusive(buildInstallAllArgs(), { ...runOptions, cwd });
   }
 
   outdated(cwd: string, options: { includeTransitive?: boolean } = {}, runOptions: RunOptions = {}): Promise<CommandResult> {

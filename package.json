@@ -6,6 +6,7 @@
   "publisher": "piyushdoorwar",
   "license": "MIT",
   "icon": "media/npmll.png",
+  "homepage": "https://npmll.piyushdoorwar.com/",
   "author": {
     "name": "Piyush Doorwar"
   },
@@ -249,9 +250,10 @@
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/vscode": "^1.96.0",
-    "@vscode/vsce": "^3.2.0",
-    "esbuild": "^0.24.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.7.0",
-    "vitest": "^2.1.8"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
   }
 }

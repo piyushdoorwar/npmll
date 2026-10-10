@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { post } from "../api/vscodeApi";
-import { PackageDetails as Details, ProjectInfo } from "../types";
+import { DependencyType, PackageDetails as Details, ProjectInfo } from "../types";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { IconClose, IconVerified } from "./Icons";
 import { ProjectPicker } from "./ProjectPicker";
@@ -10,18 +10,21 @@ export function PackageDetails(props: {
   details?: Details;
   loading: boolean;
   projects: ProjectInfo[];
+  defaultPrerelease?: boolean;
   onClose: () => void;
 }) {
   const { details } = props;
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [version, setVersion] = useState("");
-  const [includePrerelease, setIncludePrerelease] = useState(false);
+  const [dependencyType, setDependencyType] = useState<DependencyType>("dependencies");
+  const [includePrerelease, setIncludePrerelease] = useState(props.defaultPrerelease ?? false);
   const [confirm, setConfirm] = useState<{ title: string; body: string; danger?: boolean; action: () => void }>();
   const [copied, setCopied] = useState<string>();
 
   useEffect(() => {
     setSelectedProjects(details?.usedInProjects.map((p) => p.path) ?? []);
     setVersion("");
+    setDependencyType("dependencies");
   }, [details?.id]);
 
   if (props.loading || !details) {
@@ -83,16 +86,23 @@ export function PackageDetails(props: {
     const isUpdate = selectedProjects.some((p) => installedPaths.has(p));
     setConfirm({
       title: `${isUpdate ? "Install / update" : "Install"} ${details.id}`,
-      body: `Version: ${effectiveVersion}\nProjects:\n${selectedProjects
+      body: `Version: ${effectiveVersion}\nPackages:\n${selectedProjects
         .map((path) => `  • ${props.projects.find((p) => p.path === path)?.name ?? path}`)
         .join("\n")}`,
       action: () => {
-        post({
-          type: isUpdate ? "updatePackage" : "installPackage",
-          packageId: details.id,
-          version: effectiveVersion,
-          projectPaths: selectedProjects
-        });
+        // Updates keep each package's existing dependency type; the selector
+        // only decides where a new dependency is saved.
+        post(
+          isUpdate
+            ? { type: "updatePackage", packageId: details.id, version: effectiveVersion, projectPaths: selectedProjects }
+            : {
+                type: "installPackage",
+                packageId: details.id,
+                version: effectiveVersion,
+                projectPaths: selectedProjects,
+                dependencyType
+              }
+        );
         setConfirm(undefined);
       }
     });
@@ -161,10 +171,12 @@ export function PackageDetails(props: {
             <span className="v">{details.owners.join(", ")}</span>
           </div>
         )}
-        <div className="meta-row">
-          <span className="k">Downloads</span>
-          <span className="v">{details.totalDownloads?.toLocaleString() ?? "—"}</span>
-        </div>
+        {details.totalDownloads !== undefined && (
+          <div className="meta-row">
+            <span className="k">Downloads</span>
+            <span className="v">{details.totalDownloads.toLocaleString()}</span>
+          </div>
+        )}
         <div className="meta-row">
           <span className="k">License</span>
           <span className="v">
@@ -216,6 +228,20 @@ export function PackageDetails(props: {
           onChange={setVersion}
           onTogglePrerelease={setIncludePrerelease}
         />
+      </div>
+
+      <div className="details-section">
+        <h4>Save as</h4>
+        <select
+          aria-label="Dependency type"
+          value={dependencyType}
+          onChange={(e) => setDependencyType(e.target.value as DependencyType)}
+        >
+          <option value="dependencies">dependencies</option>
+          <option value="devDependencies">devDependencies</option>
+          <option value="peerDependencies">peerDependencies</option>
+          <option value="optionalDependencies">optionalDependencies</option>
+        </select>
       </div>
 
       <div className="details-section">

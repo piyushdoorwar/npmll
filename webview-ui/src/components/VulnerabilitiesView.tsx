@@ -135,7 +135,6 @@ export function VulnerabilitiesView(props: {
               <th>Workspace package</th>
               <th>Version</th>
               <th>Reason</th>
-              <th>Alternative</th>
             </tr>
           </thead>
           <tbody>
@@ -145,11 +144,6 @@ export function VulnerabilitiesView(props: {
                 <td>{entry.projectName}</td>
                 <td className="mono">{entry.resolvedVersion}</td>
                 <td>{entry.reasons.join(", ")}</td>
-                <td>
-                  {entry.alternativeId
-                    ? `${entry.alternativeId}${entry.alternativeVersionRange ? ` (${entry.alternativeVersionRange})` : ""}`
-                    : "—"}
-                </td>
               </tr>
             ))}
           </tbody>

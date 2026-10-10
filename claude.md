@@ -94,7 +94,14 @@ sets up both halves.
 
 - **Never run `npm` (or anything) through a shell.** Use `commandRunner` / `spawn`
   with an argument array and an explicit `cwd`. This is a security boundary, not a
-  style choice.
+  style choice. On Windows `npm` is an `npm.cmd` shim that `spawn` can't run without a
+  shell, so `resolveNpmLauncher()` runs the adjacent `npm-cli.js` with node instead.
+- **Package writes are serialized.** `NpmCliService.install/uninstall/installAll` share
+  one queue so batch updates can't race on `package.json` / `package-lock.json`. Add
+  any new mutating npm command to that queue.
+- **npm failures can arrive as JSON.** `npm outdated/audit --json` print
+  `{"error": {...}}` on failure (e.g. `ENOLOCK`); the parsers return `null` for it so a
+  failed check is reported as an error, never as "all clear".
 - **Mask secrets.** Route any registry URL / token / output that could contain
   credentials through `utils/security.ts` before logging or surfacing it. npm LL reads
   `.npmrc` to learn which registries exist and whether auth is configured, but never

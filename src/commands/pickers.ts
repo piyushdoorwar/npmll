@@ -108,12 +108,16 @@ export async function pickVersion(
   options: { currentVersion?: string } = {}
 ): Promise<string | undefined> {
   let versions: string[] = [];
+  let latestTag: string | undefined;
   try {
     versions = await services.api.getVersions(packageId);
+    latestTag = await services.api.getLatestVersion(packageId);
   } catch (err) {
     logger.warn(`Could not list versions for ${packageId}: ${String(err)}`);
   }
-  const stable = [...versions].reverse().find((v) => !v.includes("-"));
+  // Prefer the `latest` dist-tag: it is what `npm install <pkg>` resolves to.
+  const stable =
+    latestTag && !latestTag.includes("-") ? latestTag : [...versions].reverse().find((v) => !v.includes("-"));
   const prerelease = [...versions].reverse().find((v) => v.includes("-"));
 
   type Item = vscode.QuickPickItem & { value: string | "__pick__" | "__custom__" };
